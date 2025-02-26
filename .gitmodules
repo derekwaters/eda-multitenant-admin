@@ -1,0 +1,3 @@
+[submodule "rulebooks"]
+	path = rulebooks
+	url = https://github.com/derekwaters/eda-multitenant-team
