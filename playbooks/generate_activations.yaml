@@ -5,7 +5,9 @@
     _team_rulebook_git_repo: "https://github.com/derekwaters/eda-multitenant-team.git"
     _team_rulebook_exclude_list: "rulebook_template.yaml"
     _team_rulebook_tmp_dir: "/tmp/checkout"
-    _kafka_server: "something"
+    kafkahostname: "something"
+    kafkaport: 9192
+    kafkagroupid: "eda"
 
   
   tasks:
@@ -19,12 +21,14 @@
     - name: Iterate over the team rulebooks to build list of rulebooks
       ansible.builtin.find:
         paths: "{{ _team_rulebook_tmp_dir }}"
+        patterns: "*.yaml,*.yml"
         excludes: "{{ _team_rulebook_exclude_list }}"
-      register: _rulebook_filenames
+      register: _rulebook_files
         
-    - name: Dump the filenames
-      ansible.builtin.debug:
-        var: _rulebook_filenames
+    - name: Generate the rulebook filenames
+      ansible.builtin.set_fact:
+        _rulebook_filenames: "{{ _rulebook_filenames | default([]) + [ item.path | basename ]}}"
+      loop: "{{ _rulebook_files.files }}"
 
     - name: Generate rulebook activations data
       ansible.builtin.set_fact:
@@ -40,37 +44,12 @@
               'kafkaport': kafkaport,
               'kafkagroupid': kafkagroupid
             },
-            'enabled': true
+            'enabled': true,
             'state': 'present'
           } ] }}"
-        loop: "{{ _rulebook_filenames }}"
-        loop_control:
-          loop_var: rulebook
-        
-    - name: Dump the activation data
-      ansible.builtin.debug:
-        var: _activations
-
-    - name: Generate rulebook activations data
-      ansible.builtin.set_fact:
-        _activations: >
-          "{{ _activations | default([]) + [ {
-            'name': rulebook, 
-            'description': 'Activation for ' + rulebook,
-            'project': 'eda-multitenant-team',
-            'rulebook': rulebook,
-            'decision_environment': 'Default Decision Environment',
-            'extra_vars': {
-              'kafkahostname': kafkahostname,
-              'kafkaport': kafkaport,
-              'kafkagroupid': kafkagroupid
-            },
-            'enabled': true
-            'state': 'present'
-          } ] }}"
-        loop: "{{ _rulebook_filenames }}"
-        loop_control:
-          loop_var: rulebook
+      loop: "{{ _rulebook_filenames }}"
+      loop_control:
+        loop_var: rulebook
         
     - name: Dump the activation data
       ansible.builtin.debug:
@@ -79,3 +58,8 @@
     - name: Create the Rulebook Activation objects
       ansible.builtin.debug:
         msg: "TODO"
+
+    - name: Clean up
+      ansible.builtin.file:
+        path: "{{ _team_rulebook_tmp_dir }}"
+        state: absent
