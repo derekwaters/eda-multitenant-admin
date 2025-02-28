@@ -1,0 +1,81 @@
+---
+- name: Generate Rulebook Activations for team-defined rulebooks
+  hosts: all
+  vars:
+    _team_rulebook_git_repo: "https://github.com/derekwaters/eda-multitenant-team.git"
+    _team_rulebook_exclude_list: "rulebook_template.yaml"
+    _team_rulebook_tmp_dir: "/tmp/checkout"
+    _kafka_server: "something"
+
+  
+  tasks:
+    - name: Pull the git repo with the rulebooks
+      ansible.builtin.git:
+        repo: "{{ _team_rulebook_git_repo }}"
+        dest: "{{ _team_rulebook_tmp_dir }}"
+        single_branch: yes
+        version: main
+
+    - name: Iterate over the team rulebooks to build list of rulebooks
+      ansible.builtin.find:
+        paths: "{{ _team_rulebook_tmp_dir }}"
+        excludes: "{{ _team_rulebook_exclude_list }}"
+      register: _rulebook_filenames
+        
+    - name: Dump the filenames
+      ansible.builtin.debug:
+        var: _rulebook_filenames
+
+    - name: Generate rulebook activations data
+      ansible.builtin.set_fact:
+        _activations: >
+          "{{ _activations | default([]) + [ {
+            'name': rulebook, 
+            'description': 'Activation for ' + rulebook,
+            'project': 'eda-multitenant-team',
+            'rulebook': rulebook,
+            'decision_environment': 'Default Decision Environment',
+            'extra_vars': {
+              'kafkahostname': kafkahostname,
+              'kafkaport': kafkaport,
+              'kafkagroupid': kafkagroupid
+            },
+            'enabled': true
+            'state': 'present'
+          } ] }}"
+        loop: "{{ _rulebook_filenames }}"
+        loop_control:
+          loop_var: rulebook
+        
+    - name: Dump the activation data
+      ansible.builtin.debug:
+        var: _activations
+
+    - name: Generate rulebook activations data
+      ansible.builtin.set_fact:
+        _activations: >
+          "{{ _activations | default([]) + [ {
+            'name': rulebook, 
+            'description': 'Activation for ' + rulebook,
+            'project': 'eda-multitenant-team',
+            'rulebook': rulebook,
+            'decision_environment': 'Default Decision Environment',
+            'extra_vars': {
+              'kafkahostname': kafkahostname,
+              'kafkaport': kafkaport,
+              'kafkagroupid': kafkagroupid
+            },
+            'enabled': true
+            'state': 'present'
+          } ] }}"
+        loop: "{{ _rulebook_filenames }}"
+        loop_control:
+          loop_var: rulebook
+        
+    - name: Dump the activation data
+      ansible.builtin.debug:
+        var: _activations
+
+    - name: Create the Rulebook Activation objects
+      ansible.builtin.debug:
+        msg: "TODO"
