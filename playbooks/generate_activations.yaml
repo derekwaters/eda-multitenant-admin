@@ -10,22 +10,21 @@
     kafkaport: 9192
     kafkagroupid: "eda"
 
-  
   tasks:
     - name: Pull the git repo with the rulebooks
       ansible.builtin.git:
         repo: "{{ _team_rulebook_git_repo }}"
         dest: "{{ _team_rulebook_tmp_dir }}"
-        single_branch: yes
+        single_branch: true
         version: main
 
     - name: Iterate over the team rulebooks to build list of rulebooks
       ansible.builtin.find:
-        paths: "{{ _team_rulebook_tmp_dir }}"
+        paths: "{{ _team_rulebook_tmp_dir }}/rulebooks"
         patterns: "*.yaml,*.yml"
         excludes: "{{ _team_rulebook_exclude_list }}"
       register: _rulebook_files
-        
+
     - name: Generate the rulebook filenames
       ansible.builtin.set_fact:
         _rulebook_filenames: "{{ _rulebook_filenames | default([]) + [ item.path | basename ]}}"
@@ -35,7 +34,7 @@
       ansible.builtin.set_fact:
         _activations: >
           "{{ _activations | default([]) + [ {
-            'name': rulebook, 
+            'name': rulebook,
             'description': 'Activation for ' + rulebook,
             'project': 'eda-multitenant-team',
             'rulebook': rulebook,
@@ -51,10 +50,20 @@
       loop: "{{ _rulebook_filenames }}"
       loop_control:
         loop_var: rulebook
-        
+
     - name: Dump the activation data
       ansible.builtin.debug:
         var: _activations
+
+    - name: Ensure the project exists
+      ansible.builtin.include_role:
+        name: "infra.eda_configuration.project"
+      vars:
+        eda_projects:
+          - name: eda-multitenant-team
+            description: EDA Multitenant Team Test
+            url: "{{ _team_rulebook_git_repo }}"
+            state: present
 
     - name: Make the activations object
       ansible.builtin.set_fact:
