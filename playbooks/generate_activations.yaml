@@ -1,6 +1,7 @@
 ---
 - name: Generate Rulebook Activations for team-defined rulebooks
   hosts: all
+  connection: local
   vars:
     _team_rulebook_git_repo: "https://github.com/derekwaters/eda-multitenant-team.git"
     _team_rulebook_exclude_list: "rulebook_template.yaml"
@@ -55,9 +56,17 @@
       ansible.builtin.debug:
         var: _activations
 
-    - name: Create the Rulebook Activation objects
+    - name: Make the activations object
+      ansible.builtin.set_fact:
+        eda_rulebook_activations: "{{ _activations | from_json }}"
+
+    - name: Dump the activation data
       ansible.builtin.debug:
-        msg: "TODO"
+        var: eda_rulebook_activations
+
+    - name: Create the Rulebook Activation objects
+      ansible.builtin.include_role:
+        name: "infra.eda_configuration.rulebook_activation"
 
     - name: Clean up
       ansible.builtin.file:
